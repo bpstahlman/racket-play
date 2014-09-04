@@ -21,9 +21,7 @@
   io)
 
 (define (handle-client-msg port)
-  (read port)
-  (read port)
-  (printf "Client msg received!\n") (flush-output)
+  (printf "Client msg received: ~a!\n" (read port)) (flush-output)
   ; Leave "synchronization result" unchanged: i.e., return the port.
   port)
 
