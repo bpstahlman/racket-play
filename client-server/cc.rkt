@@ -21,10 +21,6 @@
   ; Caveat: Display (don't write) whitespace to delimit the datum for server read.
   (display " " out)
   (flush-output out)
-  ; Now write to stdout for debugging.
-  (write (read p))
-  (display " ")
-  (flush-output)
   ; Return port as sync result
   p)
 

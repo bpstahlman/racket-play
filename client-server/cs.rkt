@@ -16,7 +16,9 @@
 			  (car io)
 			  (client "" (car io) (cdr io) #f)))
   (printf "Client connected!\n")
-  (flush-output))
+  (flush-output)
+  ; Return ports as sync result
+  io)
 
 (define (handle-client-msg port)
   (read port)
