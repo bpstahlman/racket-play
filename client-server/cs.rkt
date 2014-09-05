@@ -4,36 +4,34 @@
 (require racket/tcp)
 (require racket/string)
 
-(struct client (username in out logged-in))
 (define client-ios '())
-(define clients (hash))
-
-(define (handle-new-client io)
-  ; Add '(in out) to list of clients
-  ; Separately, maintain a hash keyed by the in port itself.
-  (set! client-ios (cons io client-ios))
-  (set! clients (hash-set clients
-			  (car io)
-			  (client "" (car io) (cdr io) #f)))
-  (printf "Client connected!\n")
-  (flush-output)
-  ; Return ports as sync result
-  io)
-
-(define (handle-client-msg port)
-  (printf "Client msg received: ~a!\n" (read port)) (flush-output)
-  ; Leave "synchronization result" unchanged: i.e., return the port.
-  port)
 
 (define listener (tcp-listen 12346))
-(define new-client-evt (wrap-evt (tcp-accept-evt listener) handle-new-client))
+
+(define (handle-new-client in out)
+  ; Add '(in out) to list of clients
+  (set! client-ios (cons (list in out) client-ios))
+  (printf "Client connected!\n")
+  (flush-output))
+
+(define (try-accept-client)
+  (when (tcp-accept-ready? listener)
+    (let-values [((in out) (tcp-accept listener))]
+		(handle-new-client in out))))
+
+(define (try-rcv-client in)
+  (when (byte-ready? in)
+    (let [(bstr (make-bytes 100))]
+      (printf "About to read from client...\n") (flush-output)
+      (read-bytes-avail! bstr in)
+      (printf "Got value `~a'\n" bstr) (flush-output)
+      (printf "Done reading from client...\n") (flush-output))))
 
 (let loop ()
   ; Note: sync res for new-client-evt is actually 2 el list of in out
-  (apply sync new-client-evt
-	 ;(map (lambda (c) (wrap-evt (client-in c) handle-client-msg)) (hash-values clients)))
-	 (map (lambda (p) (wrap-evt p handle-client-msg)) (hash-keys clients)))
-
+  (try-accept-client)
+  (for [(p client-ios)]
+       (try-rcv-client (car p)))
   (loop))
 
 (printf "Closing listener...\n") (flush-output)

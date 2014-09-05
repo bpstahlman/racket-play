@@ -16,13 +16,13 @@
     p))
 
 (define (handle-rdy-to-send p)
-  (printf "Ready to send!\n") (flush-output)
-  (write (read p) out)
-  ; Caveat: Display (don't write) whitespace to delimit the datum for server read.
-  (display " " out)
-  (flush-output out)
-  ; Return port as sync result
-  p)
+  (when (byte-ready? p)
+    (let [(d (read p))]
+      (printf "Ready to send: ~a\n" d) (flush-output)
+      (write d out)
+      ; Caveat: Display (don't write) whitespace to delimit the datum for server read.
+      (display " " out)
+      (flush-output out))))
 
 (define server-msg-evt (wrap-evt in handle-server-msg))
 (define rdy-to-send-evt (wrap-evt (standard-input-port) handle-rdy-to-send))
