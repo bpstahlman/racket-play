@@ -20,10 +20,19 @@
   ; Return ports as sync result
   io)
 
-(define (handle-client-msg port)
-  (printf "Client msg received: ~a!\n" (read port)) (flush-output)
-  ; Leave "synchronization result" unchanged: i.e., return the port.
-  port)
+;(define (handle-client-msg port)
+;  (printf "Client msg received: ~a!\n" (read port)) (flush-output)
+;  ; Leave "synchronization result" unchanged: i.e., return the port.
+;  port)
+
+(define (handle-client-msg in)
+  (printf "Inside handle-client-msg!\n") (flush-output)
+  (define spc (peek-string 1 0 in))
+  (printf "Just peeked string\n `~a'" spc) (flush-output)
+  (define d (if (string=? "" (string-trim spc))
+	      (begin (printf "About to read-string\n") (flush-output) (read-string 1 in) "")
+	      (begin (printf "About to read form\n") (flush-output) (read in))))
+  (printf "Client msg received: `~a'!\n" d) (flush-output))
 
 (define listener (tcp-listen 12346))
 (define new-client-evt (wrap-evt (tcp-accept-evt listener) handle-new-client))
