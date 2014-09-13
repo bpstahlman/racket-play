@@ -17,12 +17,14 @@
 
 ; Send to all logged-in clients but the specified one.
 (define (bcast-client-msg msg cli)
-  (for* [(o-cli clients)
-	 (out (client-out o-cli))
-	 #:unless (eq? cli o-cli)
-	 #:when (client-name o-cli)]
-	(write msg out)
-	(flush-output out)))
+  (for* [(o-cli (hash-values clients))
+	 #:when (and (not (eq? cli o-cli)) (client-name o-cli))]
+	(printf "Inside!!!! msg=~a\n" msg) (flush-output)
+	(let ((out (client-out o-cli)))
+	  (write msg out)
+	  (display " " out)
+	  (flush-output out)
+	  (printf "Wrote and flushed msg to a client!\n") (flush-output))))
 
 ; TODO: Consider turning this into a read-and-process-datum function, which takes only in port.
 (define (process-client-msg msg cli)
@@ -39,6 +41,7 @@
 	 (set-client-name! cli (cadr msg)))
        ; Ether way, send client response: accept or reject
        (write (list 'login rsp) out)
+       (display " " out)
        (flush-output out)
        (printf "Wrote accept/reject back to client!\n")
        (flush-output))]
@@ -51,10 +54,11 @@
   (printf "Inside handle-client-msg!\n") (flush-output)
   ; Consider using peek-bytes-avail! here to ensure that strange activity on port doesn't cause us to hang.
   (define spc (peek-string 1 0 in))
-  (printf "Just peeked string\n `~a'" spc) (flush-output)
+  (printf "Just peeked string `~a'\n" spc) (flush-output)
   (if (string=? "" (string-trim spc))
     (begin (printf "About to read-string\n") (flush-output) (read-string 1 in)
-	   (printf "Just read string\n") (flush-output) "")
+	   (printf "Just read string\n") (flush-output)
+	   (printf "byte-ready? ~a\n" (byte-ready? in)) (flush-output))
     (begin (printf "About to read form\n") (flush-output)
 	   (process-client-msg (read in) (hash-ref clients in)))))
 
