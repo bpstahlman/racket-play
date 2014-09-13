@@ -24,7 +24,7 @@
 	  (write msg out)
 	  (display " " out)
 	  (flush-output out)
-	  (printf "Wrote and flushed msg to a client!\n") (flush-output))))
+	  (printf "Wrote and flushed msg to client ~a\n" out) (flush-output))))
 
 ; TODO: Consider turning this into a read-and-process-datum function, which takes only in port.
 (define (process-client-msg msg cli)

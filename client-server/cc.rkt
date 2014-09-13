@@ -17,35 +17,35 @@
 ; Eventually, move into common...
 (define (handle-server-msg in)
   (printf "Inside handle-server-msg!\n") (flush-output)
-  (define spc (peek-string 1 0 in))
-  (printf "Just peeked string\n `~a'" spc) (flush-output)
-  (if (string=? "" (string-trim spc))
-    (begin (printf "About to read-string\n") (flush-output) (read-string 1 in) "")
-    (begin (printf "About to read form\n") (flush-output)
-	   (process-server-msg (read in)))))
+  (let till-empty ((ps (peek-string 1 0 in)))
+    (printf "Just peeked string `~a'\n" ps) (flush-output)
+    (when (not (string=? "" ps))
+      (if (string=? "" (string-trim ps))
+	(begin (printf "About to read-string in handle-server-msg!\n") (flush-output)
+	       (read-string 1 in))
+	(begin (printf "About to read form\n") (flush-output)
+	       (process-server-msg (read in)))))
+    (printf "Calling till-empty...\n") (flush-output)
+    ; TODO!!!!! Same problem with peek-string as with byte-ready? !!!! hangs.
+    ; TODO: Use one of the avail methods instead...
+    (till-empty (peek-string 1 0 in))))
 
 (define (handle-rdy-to-send p)
-  ; TODO: byte-ready? test probably not necessary, given evt
-  (let while-byte-ready ((br (and (sync/timeout 0 p) #t)))
-    (printf "Inside while-byte-ready\n") (flush-output)
-    (when br
-      (printf "About to peek-string...\n") (flush-output)
-      (let [(ps (string-trim (peek-string 1 0 p)))]
-	(printf "Just did peek-string...\n") (flush-output)
-	(if (string=? "" ps)
-	  ; Discard peeked whitespace
-	  (begin (printf "About to read-string\n") (flush-output)
-		 (read-string 1 p)
-		 (printf "Just read-string\n") (flush-output))
-	  (begin (printf "Ready to send!\n") (flush-output)
-		 (write (read p) out)
-		 (printf "Just sent\n") (flush-output)
-		 ; Caveat: Display (don't write) whitespace to delimit the datum for server read.
-		 (display " " out)
-		 (flush-output out))))
-      (printf "About to call while-byte-ready with byte-ready?\n") (flush-output)
-      ; TODO: Weird!!! byte-ready? is blocking!!!!!!!!!!
-      (while-byte-ready (and (sync/timeout 0 p) #t))))
+  (printf "About to peek-string...\n") (flush-output)
+  (let [(ps (string-trim (peek-string 1 0 p)))]
+    (printf "Just did peek-string...\n") (flush-output)
+    (if (string=? "" ps)
+      ; Discard peeked whitespace
+      (begin (printf "About to read-string in handle-rdy-to-send\n") (flush-output)
+	     (read-string 1 p)
+	     (printf "Just read-string\n") (flush-output))
+      (begin (printf "Ready to send!\n") (flush-output)
+	     (write (read p) out)
+	     (printf "Just sent\n") (flush-output)
+	     ; Caveat: Display (don't write) whitespace to delimit the datum for server read.
+	     (display " " out)
+	     (flush-output out))))
+  ; TODO: Weird!!! byte-ready? is blocking!!!!!!!!!!
   (printf "Leaving handle-rdy-to-send\n") (flush-output))
 
 (define server-msg-evt (wrap-evt in handle-server-msg))
@@ -56,7 +56,7 @@
     (printf "cntr=~a\n" cntr))
   ; TODO: Go back to using the evt defined above.
   (printf "About to sync...\n") (flush-output)
-  (sync rdy-to-send-evt (wrap-evt (standard-input-port) handle-rdy-to-send))
+  (sync rdy-to-send-evt (wrap-evt in handle-server-msg))
   (loop (+ cntr 1)))
 
 
