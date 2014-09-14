@@ -6,6 +6,7 @@
 
 (struct client (name in out) #:mutable)
 (define clients (hash))
+(define dbg-out #f)
 
 (define (handle-new-client io)
   ; Maintain a hash keyed by the in port itself.
@@ -33,6 +34,8 @@
     ; Handle client login
     [(login)
      (printf "Got login request for ~a\n" (cadr msg)) (flush-output)
+     ; DEBUG ONLY: Save first login.
+     (when (not dbg-out) (set! dbg-out out))
      (let* [(name (cadr msg))
 	    ; Recall name starts out #f before login.
 	    (rsp (not (findf (lambda (c) (and (client-name c)
@@ -46,11 +49,17 @@
        (printf "Wrote accept/reject back to client!\n")
        (flush-output))]
     [(msg)
-     (bcast-client-msg msg cli)]
+     (printf "Writing ~a to ~a\n" msg dbg-out) (flush-output dbg-out)
+     (write msg dbg-out)
+     (display " " dbg-out)
+     (flush-output dbg-out)
+     ;(bcast-client-msg msg cli)
+     ]
     [else
       (printf "Bad msg from client! ~a - ~a\n" msg (car msg))]))
 
 (define (handle-client-msg in)
+  ;(sleep 3)
   (printf "Inside handle-client-msg!\n") (flush-output)
   ; Consider using peek-bytes-avail! here to ensure that strange activity on port doesn't cause us to hang.
   (define spc (peek-string 1 0 in))
