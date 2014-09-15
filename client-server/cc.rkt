@@ -1,7 +1,7 @@
 #lang racket/base
 
 (require racket/tcp)
-(require rnrs/io/ports-6)
+;(require rnrs/io/ports-6)
 (require racket/string) ; string-trim
 
 (printf "Trying to connect to server... ")
@@ -14,7 +14,7 @@
   (flush-output))
 
 ; TODO: Fix this - like server!
-; Eventually, move into common...
+; Eventually, move into common module...
 (define (handle-server-msg in)
   (define bs (make-bytes 1))
   (printf "Inside handle-server-msg!\n") (flush-output)
@@ -53,21 +53,20 @@
   (printf "Leaving handle-rdy-to-send\n") (flush-output))
 
 (define server-msg-evt (wrap-evt in handle-server-msg))
-(define rdy-to-send-evt (wrap-evt (standard-input-port) handle-rdy-to-send))
+(define rdy-to-send-evt (wrap-evt (current-input-port) handle-rdy-to-send))
 
 (let loop ((cntr 0))
   (when (= 0 (modulo cntr 1000000))
     (printf "cntr=~a\n" cntr))
   ; TODO: Go back to using the evt defined above.
   (printf "About to sync...\n") (flush-output)
-  ; RACKET TCP BUG!!!!!!!!!!!!!!!!!
+  ; POSSIBLE RACKET TCP BUG!!!!!!!!!!!!!!!!!
   ; Even sync/timeout is blocking!!!!! The only thing that can unblock is a new
   ; line on stdin (rdy-to-send-evt); once that occurs, the server-msg-evt will be
   ; ready next time we sync (and the extra call to handle-server-msg isn't needed).
-  (sync/timeout 1 rdy-to-send-evt server-msg-evt)
+  ;(sync/timeout 1 rdy-to-send-evt server-msg-evt)
+  (sync rdy-to-send-evt server-msg-evt)
   (printf "timed out?...\n") (flush-output)
-  ; TODO: DEBUG
-  (handle-server-msg in)
   (loop (+ cntr 1)))
 
 

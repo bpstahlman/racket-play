@@ -6,7 +6,6 @@
 
 (struct client (name in out) #:mutable)
 (define clients (hash))
-(define dbg-out #f)
 
 (define (handle-new-client io)
   ; Maintain a hash keyed by the in port itself.
@@ -35,7 +34,6 @@
     [(login)
      (printf "Got login request for ~a\n" (cadr msg)) (flush-output)
      ; DEBUG ONLY: Save first login.
-     (when (not dbg-out) (set! dbg-out out))
      (let* [(name (cadr msg))
 	    ; Recall name starts out #f before login.
 	    (rsp (not (findf (lambda (c) (and (client-name c)
@@ -49,12 +47,7 @@
        (printf "Wrote accept/reject back to client!\n")
        (flush-output))]
     [(msg)
-     (printf "Writing ~a to ~a\n" msg dbg-out) (flush-output dbg-out)
-     (write msg dbg-out)
-     (display " " dbg-out)
-     (flush-output dbg-out)
-     ;(bcast-client-msg msg cli)
-     ]
+     (bcast-client-msg msg cli)]
     [else
       (printf "Bad msg from client! ~a - ~a\n" msg (car msg))]))
 
@@ -66,8 +59,7 @@
   (printf "Just peeked string `~a'\n" spc) (flush-output)
   (if (string=? "" (string-trim spc))
     (begin (printf "About to read-string\n") (flush-output) (read-string 1 in)
-	   (printf "Just read string\n") (flush-output)
-	   (printf "byte-ready? ~a\n" (byte-ready? in)) (flush-output))
+	   (printf "Just read string\n") (flush-output))
     (begin (printf "About to read form\n") (flush-output)
 	   (process-client-msg (read in) (hash-ref clients in)))))
 
