@@ -3,6 +3,7 @@
 
 (require racket/tcp)
 (require racket/string)
+(require "client-server-common.rkt")
 
 (struct client (name in out) #:mutable)
 (define clients (hash))
@@ -19,12 +20,10 @@
 (define (bcast-client-msg msg cli)
   (for* [(o-cli (hash-values clients))
 	 #:when (and (not (eq? cli o-cli)) (client-name o-cli))]
-	(printf "Inside!!!! msg=~a\n" msg) (flush-output)
 	(let ((out (client-out o-cli)))
 	  (write msg out)
 	  (display " " out)
-	  (flush-output out)
-	  (printf "Wrote and flushed msg to client ~a\n" out) (flush-output))))
+	  (flush-output out))))
 
 ; TODO: Consider turning this into a read-and-process-datum function, which takes only in port.
 (define (process-client-msg msg cli)
@@ -32,36 +31,31 @@
   (case (car msg)
     ; Handle client login
     [(login)
-     (printf "Got login request for ~a\n" (cadr msg)) (flush-output)
-     ; DEBUG ONLY: Save first login.
+     (printf "Received login request for ~a\n" (cadr msg)) (flush-output)
      (let* [(name (cadr msg))
+	    ; See whether this name is already taken.
 	    ; Recall name starts out #f before login.
 	    (rsp (not (findf (lambda (c) (and (client-name c)
 					      (string=? (client-name c) name))) (hash-values clients))))]
        (when rsp
+	 ; Login available
 	 (set-client-name! cli (cadr msg)))
        ; Ether way, send client response: accept or reject
        (write (list 'login rsp) out)
        (display " " out)
-       (flush-output out)
-       (printf "Wrote accept/reject back to client!\n")
-       (flush-output))]
+       (flush-output out))]
     [(msg)
      (bcast-client-msg msg cli)]
     [else
-      (printf "Bad msg from client! ~a - ~a\n" msg (car msg))]))
+      (printf "Unsupported msg from client! ~a\n" msg)]))
 
+;; TODO: Under Construction!!!! Handler args...
 (define (handle-client-msg in)
-  ;(sleep 3)
-  (printf "Inside handle-client-msg!\n") (flush-output)
-  ; Consider using peek-bytes-avail! here to ensure that strange activity on port doesn't cause us to hang.
-  (define spc (peek-string 1 0 in))
-  (printf "Just peeked string `~a'\n" spc) (flush-output)
-  (if (string=? "" (string-trim spc))
-    (begin (printf "About to read-string\n") (flush-output) (read-string 1 in)
-	   (printf "Just read string\n") (flush-output))
-    (begin (printf "About to read form\n") (flush-output)
-	   (process-client-msg (read in) (hash-ref clients in)))))
+  (handle-form-maybe
+    in
+    (lambda (msg) (process-client-msg msg (hash-ref clients in)))
+    (lambda () (printf "Eof or something...\n") (flush-output))))
+
 
 (define listener (tcp-listen 12346))
 (define new-client-evt (wrap-evt (tcp-accept-evt listener) handle-new-client))
