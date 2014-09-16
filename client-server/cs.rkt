@@ -54,7 +54,8 @@
   (handle-form-maybe
     in
     (lambda (msg) (process-client-msg msg (hash-ref clients in)))
-    (lambda () (printf "Eof or something...\n") (flush-output))))
+    ; TODO: Discard this client...
+    (lambda () (printf "Got eof from client!\n") (flush-output))))
 
 
 (define listener (tcp-listen 12346))

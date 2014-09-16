@@ -1,16 +1,17 @@
 #lang racket
 (provide handle-form-maybe)
 
-; TODO: Handle eof...
-(define (handle-form-maybe in msg-handler eof-handler )
+; Discard any leading whitespace on specified port, then read form if
+; possible, applying msg-handler to the form read. If no form can be
+; read, simply return. If eof is encountered, invoke the supplied
+; eof-handler.
+(define (handle-form-maybe in msg-handler eof-handler)
   (let till-empty ([br (byte-ready? in)])
     (when br
       (let ([c (peek-char in 0)])
-	(printf "peeked-byte = ~a\n" c) (flush-output)
 	(if (eof-object? c)
-	  (begin (printf "Calling eof-handler\n") (flush-output) (eof-handler)) 
+	  (eof-handler) 
 	  (begin
-	    (printf "About to peek-string!\n") (flush-output)
 	    (if (char-whitespace? c)
 	      (read-char in)
 	      (msg-handler (read in)))  
